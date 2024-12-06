@@ -1,0 +1,4 @@
+CompleteIt 
+
+Project idea
+It is a Task Manager project in which the manager sends tasks to users and the users get a notification that the manager has assigned them a task and when the task is completed, they can add it as completed and this is sent as a notification to the manager
