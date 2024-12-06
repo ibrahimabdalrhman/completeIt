@@ -152,3 +152,92 @@ exports.getAll = asyncHandler(async (req, res) => {
 
   res.json(projects);
 });
+
+exports.getProjectById = asyncHandler(async (req, res) => {
+  const projectId = parseInt(req.params.projectId); // Get projectId from request params
+  const userId = req.user.id; // Assuming userId is available in req.user from authentication middleware
+
+  const project = await prisma.project.findUnique({
+    where: {
+      id: projectId, // Get project by ID
+    },
+    include: {
+      admin: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+      users: {
+        select: {
+          id: true,
+          name: true,
+        },
+      },
+    },
+  });
+
+  // Check if the user is either an admin or a member
+  const isAdmin = project.admin.some((admin) => admin.id === userId);
+  const isMember = project.users.some((user) => user.id === userId);
+
+  if (!isAdmin && !isMember) {
+    return res
+      .status(403)
+      .json({ error: "You are not authorized to access this project" });
+  }
+
+  res.json(project);
+});
+
+exports.getAllUserinProject = asyncHandler(async (req, res) => {
+  const id = parseInt(req.params.projectId);
+  const project = await prisma.project.findUnique({
+    where: { id },
+    include: {
+      admin: true,
+      users: true,
+    },
+  });
+  if (!project) {
+    return res.status(404).json({ error: "Project not found" });
+  }
+  const currentUserId = req.user.id;
+  const checkCurrentUserIsAdmin = project.admin.some(
+    (admin) => admin.id === currentUserId
+  );
+
+  if (!checkCurrentUserIsAdmin) {
+    return res
+      .status(403)
+      .json({ error: "You must be an admin to show users" });
+  }
+
+  res.json(project.users);
+});
+
+exports.getAllAdminsinProject = asyncHandler(async (req, res) => {
+  const id = parseInt(req.params.projectId);
+  const project = await prisma.project.findUnique({
+    where: { id },
+    include: {
+      admin: true,
+      users: true,
+    },
+  });
+  if (!project) {
+    return res.status(404).json({ error: "Project not found" });
+  }
+  const currentUserId = req.user.id;
+  const checkCurrentUserIsAdmin = project.admin.some(
+    (admin) => admin.id === currentUserId
+  );
+
+  if (!checkCurrentUserIsAdmin) {
+    return res
+      .status(403)
+      .json({ error: "You must be an admin to show admins" });
+  }
+
+  res.json(project.admin);
+});

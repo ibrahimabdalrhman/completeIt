@@ -1,20 +1,19 @@
-const express=require('express')
-const router=express.Router(0);
-const projectController=require('../controllers/projectController');
-const authMiddleware = require('../middleware/authMiddleware');
+const express = require("express");
+const router = express.Router(0);
+const projectController = require("../controllers/projectController");
+const authMiddleware = require("../middleware/authMiddleware");
+const taskRoute = require("./taskRoute");
 
+router.use(authMiddleware);
 
+router.use("/:projectId/tasks", taskRoute);
 
-router.get('/',authMiddleware,projectController.getAll);
+router.get("/", projectController.getAll);
+router.get("/:projectId", projectController.getProjectById);
+router.post("/new-project", projectController.createProject);
+router.patch("/:projectId/add-admin", projectController.addAdminsForProject);
+router.patch("/:projectId/add-user", projectController.addUsersForProject);
+router.get("/:projectId/all-admins", projectController.getAllAdminsinProject);
+router.get("/:projectId/all-users", projectController.getAllUserinProject);
 
-router.post('/new-project',authMiddleware,projectController.createProject);
-
-router.patch('/:projectId/add-admin',authMiddleware,projectController.addAdminsForProject);
-router.patch('/:projectId/add-user',authMiddleware,projectController.addUsersForProject);
-
-
-
-
-
-
-module.exports=router;
+module.exports = router;

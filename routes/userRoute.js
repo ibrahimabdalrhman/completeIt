@@ -1,5 +1,5 @@
 const express=require('express')
-const router=express.Router(0);
+const router=express.Router();
 const userController=require('../controllers/userController')
 
 router.post('/signup',userController.createUser)
