@@ -13,6 +13,8 @@ app.use(express.json());
 
 const userRoute=require('./routes/userRoute')
 app.use('/api/user',userRoute);
+const projectRoute=require('./routes/projectRoute')
+app.use('/api/project',projectRoute);
 
 
 

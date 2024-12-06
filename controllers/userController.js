@@ -31,7 +31,6 @@ exports.login = asyncHandler(async (req, res) => {
       expiresIn: process.env.JWT_EX,
     }
   );
-
   res.status(201).json({
     token,
   });
