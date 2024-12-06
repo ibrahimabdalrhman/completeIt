@@ -18,7 +18,7 @@ model User {
   name           String
   email          String           @unique
   password       String
-  role           Role
+  role           Role             @default(USER)
   projects       Project[]        @relation("UserProjects")
   managedProjects Project[]       @relation("AdminProjects")
   tasksAssigned  Task[]           @relation("AssignedTasks")

@@ -20,7 +20,7 @@ CompleteIt is a task management system where managers assign tasks to users, who
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/CompleteIt.git
+git clone https://github.com/ibrahimabdalrhman/CompleteIt.git
 cd CompleteIt
 ```
 
