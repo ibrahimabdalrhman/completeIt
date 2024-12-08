@@ -55,3 +55,71 @@ exports.getTaskById = asyncHandler(async (req, res) => {
 
   return res.json(task);
 });
+
+exports.deleteTask = asyncHandler(async (req, res) => {
+  const id = parseInt(req.params.taskId);
+  const task = await prisma.task.delete({
+    where: { id },
+    include: {
+      assignedTo: true,
+      createdBy: true,
+      project: true,
+    },
+  });
+
+  return res.json(task);
+});
+
+exports.status = asyncHandler(async (req, res) => {
+  const id = parseInt(req.params.taskId);
+  const status = req.body.status;
+  if (!["PENDING", "IN_PROGRESS", "COMPLETED"].includes(status)) {
+    return res.status(400).json({
+      error:
+        "Invalid status value. Must be PENDING, IN_PROGRESS, or COMPLETED.",
+    });
+  }
+  const task = await prisma.task.update({
+    where: { id },
+    data: {
+      status,
+    },
+    include: {
+      assignedTo: true,
+      createdBy: true,
+      project: true,
+    },
+  });
+
+  return res.json(task);
+});
+
+exports.deadlineHasExpired = asyncHandler(async (req, res) => {
+  const now = new Date();
+  const projectId = parseInt(req.params.projectId);
+  const userId = req.user.id;
+
+  const tasks = await prisma.task.findMany({
+    where: {
+      projectId,
+      deadline: {
+        lte: now,
+      },
+      OR: [
+        {
+          userId: userId, // User is an admin
+        },
+        {
+          adminId: userId, // User is a member
+        },
+      ],
+    },
+    include: {
+      assignedTo: true,
+      createdBy: true,
+      project: true,
+    },
+  });
+
+  return res.json(tasks);
+});
