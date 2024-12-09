@@ -94,6 +94,58 @@ exports.status = asyncHandler(async (req, res) => {
   return res.json(task);
 });
 
+exports.updateTask = asyncHandler(async (req, res) => {
+  const id = parseInt(req.params.taskId);
+  const { title, description, status, deadline, userId } = req.body;
+  const adminId = parseInt(req.user.id);
+
+  // Check if the task exists and belongs to the admin
+  const task = await prisma.task.findUnique({
+    where: { id },
+    include: { createdBy: true },
+  });
+
+  if (!task) {
+    return res.status(404).json({ error: "Task not found." });
+  }
+
+  if (task.adminId !== adminId) {
+    return res.status(403).json({ error: "Unauthorized to update this task." });
+  }
+
+  // Prepare the update data
+  const updateData = {
+    title: title || task.title,
+    description: description || task.description,
+    status: status || task.status,
+    deadline: deadline || task.deadline,
+  };
+
+  // Handle assignedTo relationship if userId is provided
+  if (userId) {
+    updateData.assignedTo = {
+      connect: { id: parseInt(userId) },
+    };
+  }
+
+  // Update the task
+  const updatedTask = await prisma.task.update({
+    where: { id },
+    data: updateData,
+    include: {
+      assignedTo: true,
+      createdBy: true,
+      project: true,
+    },
+  });
+
+  return res.status(200).json({
+    message: "Task updated successfully.",
+    task: updatedTask,
+  });
+});
+
+
 exports.deadlineHasExpired = asyncHandler(async (req, res) => {
   const now = new Date();
   const projectId = parseInt(req.params.projectId);
