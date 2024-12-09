@@ -1,13 +1,23 @@
+// Import dependencies
 const asyncHandler = require("express-async-handler");
 const { PrismaClient } = require("@prisma/client");
+const createNotification = require("../utils/notification");
 const prisma = new PrismaClient();
 
+// Helper functions
+const validateStatus = (status) => {
+  const validStatuses = ["PENDING", "IN_PROGRESS", "COMPLETED"];
+  return validStatuses.includes(status);
+};
+
+// Task Controllers
 exports.createTask = asyncHandler(async (req, res) => {
   const { title, description, deadline } = req.body;
   const projectId = parseInt(req.params.projectId);
   const adminId = parseInt(req.user.id);
   const userId = parseInt(req.body.userId);
-  const status = "PENDING";
+
+  const io = req.app.get("io");
 
   const task = await prisma.task.create({
     data: {
@@ -25,6 +35,12 @@ exports.createTask = asyncHandler(async (req, res) => {
     },
   });
 
+  await createNotification(
+    userId,
+    `You have been assigned a new task: ${title}`,
+    `/api/project/${projectId}/tasks/${task.id}`,
+    io
+  );
   return res.json(task);
 });
 
@@ -38,7 +54,6 @@ exports.getTasksInProject = asyncHandler(async (req, res) => {
       project: true,
     },
   });
-
   return res.json(tasks);
 });
 
@@ -52,7 +67,6 @@ exports.getTaskById = asyncHandler(async (req, res) => {
       project: true,
     },
   });
-
   return res.json(task);
 });
 
@@ -66,31 +80,29 @@ exports.deleteTask = asyncHandler(async (req, res) => {
       project: true,
     },
   });
-
   return res.json(task);
 });
 
 exports.status = asyncHandler(async (req, res) => {
   const id = parseInt(req.params.taskId);
   const status = req.body.status;
-  if (!["PENDING", "IN_PROGRESS", "COMPLETED"].includes(status)) {
+
+  if (!validateStatus(status)) {
     return res.status(400).json({
       error:
         "Invalid status value. Must be PENDING, IN_PROGRESS, or COMPLETED.",
     });
   }
+
   const task = await prisma.task.update({
     where: { id },
-    data: {
-      status,
-    },
+    data: { status },
     include: {
       assignedTo: true,
       createdBy: true,
       project: true,
     },
   });
-
   return res.json(task);
 });
 
@@ -99,7 +111,6 @@ exports.updateTask = asyncHandler(async (req, res) => {
   const { title, description, status, deadline, userId } = req.body;
   const adminId = parseInt(req.user.id);
 
-  // Check if the task exists and belongs to the admin
   const task = await prisma.task.findUnique({
     where: { id },
     include: { createdBy: true },
@@ -113,7 +124,6 @@ exports.updateTask = asyncHandler(async (req, res) => {
     return res.status(403).json({ error: "Unauthorized to update this task." });
   }
 
-  // Prepare the update data
   const updateData = {
     title: title || task.title,
     description: description || task.description,
@@ -121,14 +131,12 @@ exports.updateTask = asyncHandler(async (req, res) => {
     deadline: deadline || task.deadline,
   };
 
-  // Handle assignedTo relationship if userId is provided
   if (userId) {
     updateData.assignedTo = {
       connect: { id: parseInt(userId) },
     };
   }
 
-  // Update the task
   const updatedTask = await prisma.task.update({
     where: { id },
     data: updateData,
@@ -145,7 +153,6 @@ exports.updateTask = asyncHandler(async (req, res) => {
   });
 });
 
-
 exports.deadlineHasExpired = asyncHandler(async (req, res) => {
   const now = new Date();
   const projectId = parseInt(req.params.projectId);
@@ -157,14 +164,7 @@ exports.deadlineHasExpired = asyncHandler(async (req, res) => {
       deadline: {
         lte: now,
       },
-      OR: [
-        {
-          userId: userId, // User is an admin
-        },
-        {
-          adminId: userId, // User is a member
-        },
-      ],
+      OR: [{ userId: userId }, { adminId: userId }],
     },
     include: {
       assignedTo: true,
@@ -172,6 +172,5 @@ exports.deadlineHasExpired = asyncHandler(async (req, res) => {
       project: true,
     },
   });
-
   return res.json(tasks);
 });
